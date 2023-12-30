@@ -6,7 +6,7 @@ import shutil
 import pandas
 
 
-excelMetadata = r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate\bifao_papers_with_language.xlsx"
+excelMetadata = r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate\metadata\bifao_papers_with_language.xlsx"
 rootDir= r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate"
 sourceTextsFolder = r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate\texts"
 sourcePDFFolder=r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate"

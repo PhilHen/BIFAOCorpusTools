@@ -10,6 +10,7 @@ import re
 pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 jsonFile = r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate\bifao_papers.json"
 rootDir= r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate"
+rawTextsFolder=os.path.join(rootDir,"rawTexts2")
 lPDFCharacterReplacements = [(chr(65533),' '), ('ﬀ','ff'), ('ﬁ','fi'), ("\uf6dc","1")]
 
 def sameOrGreaterNumber(a,b):
@@ -25,27 +26,26 @@ def pix_to_image(pix):
 
 #Paramètres: idtypographie, année début, année fin, utiliser OCR (booléen), kernelSize, nombre de colonnes de footnotes,
 # fontsizeNoteNumberInNotes, reconvertTexteToImageForOCR, fontSizeCallNote (taille du numéro de la note dans le texte),
-
 # (l'année 2004 pose un problème de ToUniCode et doit etre reconvertie en image)
 paramTypographies = [(1,1901,1969,True,30,2,8,False,8.4),
                      (2,1970,1993,True,36,2,8,False,8.4),
                      (3,1994,1994,True,36,3,8,False,8.4),
                      (4,1995,2003,False,30,3,8,False,8.4),
                      (5,2004,2004,True,30,3,8,True,8.4),
-                     (7,2005,2006,False,30,3,8,False,7.2),
-                     (7,2007,2017,False,30,3,8,False,8.4),
+                     (7,2005,2006,False,30,3,7.02,False,7.2),
+                     (7,2007,2017,False,30,3,7.02,False,8.4),
                      (8,2018,2023,False,30,3,7,False,8.4)]
 fontSizeNoteText=9.0
 fontSizeMainText=12.0
 minFontSizeFirstLetterOfText= 40
 testYear=2005
-testArticle=6
+testArticle=None
 #testArticle=22
-testPage=1
-#testPage=None
+#testPage=1
+testPage=None
 #testPage=37
-stopAfterPage = True
-stopAfterArticle = True
+stopAfterPage = False
+stopAfterArticle = False
 
 
 #nous parcourons tous les articles dans la structure json sauvée par l'étape de scraping du web
@@ -229,10 +229,10 @@ for a in articles:
                             #et le texte de la note, ensuite, commence aussi par ce nombre
                             if isFirstSpan and sSpanText.strip()=="":
                                 sSpanText=""
-                            print("span " + sSpanText)
-                            print(isFirstSpan)
-                            print(s["size"])
-                            print(sSpanText.strip().isnumeric());
+                            #print("span " + sSpanText)
+                            #print(isFirstSpan)
+                            #print(s["size"])
+                            #print(sSpanText.strip().isnumeric());
                             if isFirstSpan and sameNumber(s["size"],fontSizeNoteNumberInNotes) and sSpanText.strip().isnumeric():
                                 if re.match(r"[0-9]{5}",sSpanText): sSpanText=sSpanText[0:1]
                                 bPreviousIsNoteNumber=True
@@ -250,7 +250,8 @@ for a in articles:
                             if len(sSpanText)>20 and sameNumber(s["size"],fontSizeNoteText): isFootNote=True
                             if sameNumber(s["size"],fontSizeCallNote) and sSpanText.strip().isnumeric() and isMainText:
                                 sSpanText=" @REF_"+sArticleID+"_NOTECALL_"+sSpanText.strip() + " "
-                            isFirstSpan=False
+                            if sSpanText!="":
+                                isFirstSpan=False
                             if not(isFirstLetterBlock):
                                 sBlockText+=sSpanText
                             sPreviousRawSpanText=sRawSpanText
@@ -267,12 +268,12 @@ for a in articles:
         isFirstPageOfArticle = False
         if stopAfterPage: stop #breakpoint()
             
-    sTextPath=os.path.join(rootDir,"texts",a["nom_fichier"]+"_main.txt")
+    sTextPath=os.path.join(rawTextsFolder,a["nom_fichier"]+"_main.txt")
     f=open(sTextPath,"w",encoding="utf-8")
     f.write(sArticleText)
     f.close()
     if sFootNotesText!="":
-        sTextPath=os.path.join(rootDir,"texts",a["nom_fichier"]+"_footnotes.txt")
+        sTextPath=os.path.join(rawTextsFolder,a["nom_fichier"]+"_footnotes.txt")
         f=open(sTextPath,"w",encoding="utf-8")
         f.write(sFootNotesText)
         f.close()
