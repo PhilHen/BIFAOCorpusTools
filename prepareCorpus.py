@@ -19,11 +19,12 @@ excelMetadata = r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Inte
 textsFolder=r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate\textsAutoProcessed"
 necrologiesTextFolder = r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Nécrologies\manualCleanText"
 jsonFolder=r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Intermediate\spacyJsons"
-corpusOutputFolder=r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Corpuses\FullTest"
-corpusOutputHyperbase10Path=r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Corpuses\FullTest.txt"
+corpusOutputFolder=r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Corpuses\Pouvoir"
+corpusOutputHyperbase10Path=r"E:\personal\EtudesEgyptologie\DigitalResearch\BIFAOCorpus\Corpuses\CorpusPouvoir.txt"
 blOutputTEI = True
-blOutputHyperbase10Individual = False              #pour les petits corpus, on utilise Individual
-blOutputHyperbase10GroupedByBulletin = True          #pour les petits corpus, on utilise GroupedByBulletin - les 2 sont incompatibles
+blOutputHyperbase10Individual = True              #pour les petits corpus, on utilise Individual
+blOutputHyperbase10GroupedByBulletin = False          #pour les petits corpus, on utilise GroupedByBulletin - les 2 sont incompatibles
+blAddEpoque = True
 
 def generateXmlForText(docTitle,sourceURL,docId,lSpacy,dMetadata,sFootnotes,isNecro):
     #generates the root element
@@ -78,7 +79,10 @@ def generateXmlForText(docTitle,sourceURL,docId,lSpacy,dMetadata,sFootnotes,isNe
         elif w["text"].startswith("@REF_") and w["text"].split("_")[3]=="NOTECALL":
             noteNumber=w["text"].split("_")[4]
             if noteNumber in dictFootnotes:
-                Ep.append(E.note(" ".join(dictFootnotes[noteNumber]),n=noteNumber,place="bottom"))
+                try:        #parfois les footnotes contiennent des caractères incorrects ; dans ce cas, on les saute
+                    Ep.append(E.note(" ".join(dictFootnotes[noteNumber]),n=noteNumber,place="bottom"))
+                except Exception:
+                    pass
     #on met tout à la fin les notes qu'on n'a pas pu attacher dans le texte
     if "NONE" in dictFootnotes:
         Ep.append(E.note(" ".join(dictFootnotes["NONE"]),place="bottom"))
@@ -127,10 +131,11 @@ if blOutputHyperbase10GroupedByBulletin:
     dByBulletin={}
 sHyperbase10Output="\n\n"
 for row in metadataList:
-    #if row[langCol]=="F" and isinstance(row[necroCol],str) and row[necroCol].startswith("N"):            #critère de sélection du corpus néro
-    #if row[langCol]=="F" and row[idCol]=="BIFAO096_art_03.pdf":            #critère de sélection du corpus test 1 seul fichier
-    #if row[langCol]=="F" and isinstance(row[powerCol],str) and row[powerCol].startswith("P"):            #critère de sélection du corpus pouvoir
-    if row[langCol]=="F" and (row[yearCol]==1910 or row[yearCol]==2022):            #critère de sélection du corpus pouvoir
+    #if row[langCol]=="F" and isinstance(row[necroCol],str) and row[necroCol].startswith("N"):            #critère de sélection du corpus nécro
+    #if row[langCol]=="F" and row[idCol]=="BIFAO097_art_01.pdf":            #critère de sélection du corpus test 1 seul fichier
+    if row[langCol]=="F" and isinstance(row[powerCol],str) and row[powerCol].startswith("P"):            #critère de sélection du corpus pouvoir
+    #if row[langCol]=="F":            #critère de sélection du corpus full (trop gros pour mon PC)
+    #if row[langCol]=="F" and row[yearCol]>=1970:          #critère de sélection du corpus fullpart2
         isNecro= isinstance(row[necroCol],str) and row[necroCol].startswith("N")
         isPower =isinstance(row[powerCol],int) and row[nPowerCol].startswith("P")
         s=row[idCol]
@@ -156,7 +161,14 @@ for row in metadataList:
         for t in l:
             t["lemma"]="".join(ch for ch in t["lemma"] if unicodedata.category(ch)[0]!="C")
             t["text"]="".join(ch for ch in t["text"] if unicodedata.category(ch)[0]!="C")
-        dMetadata={"auteur": row[authorCol], "annee":str(row[yearCol]), "titre":row[titleCol]}
+        dMetadata={"auteur": row[authorCol], "annee":str(row[yearCol]), "titre":row[titleCol], "textId":bulletinID[-2:]+"A"+articleWithinBulletinID}
+        if blAddEpoque:
+            if row[yearCol]<=1956:
+                dMetadata["epoque"]="PréSuez"
+            elif row[yearCol]<2000:
+                dMetadata["epoque"]="PostSuez"
+            else:
+                dMetadata["epoque"]="Contempo"
         if isNecro:
             dMetadata["nomDefunt"]=row[deceasedNameCol]
             dMetadata["metierDefunt"]=row[deceasedJobCol]
@@ -177,9 +189,10 @@ for row in metadataList:
         if blOutputHyperbase10Individual:
             #On ne prend que les caractères alphanumériques de la valeur des attributs des textes
             sHyperbase10Output+="**** "+" ".join(["*"+k+"_"+"".join(ch for ch in dMetadata[k] if ch.isalnum()) for k in dMetadata])+"\n"
-            for t in l:
-                if not(t["text"].startswith("@")):
-                    sHyperbase10Output+="\n"+t["text"]+"\t"+t["pos"]+"\t"+t["lemma"]+"\n"
+            #for t in l:
+            #    if not(t["text"].startswith("@")):
+            #        sHyperbase10Output+="\n"+t["text"]+"\t"+t["pos"]+"\t"+t["lemma"]+"\n"
+            sHyperbase10Output+="".join(["\n"+t["text"]+"\t"+t["pos"]+"\t"+t["lemma"]+"\n" for t in l if not(t["text"].startswith("@"))])
         if blOutputHyperbase10GroupedByBulletin:
             separatorToken = {"text":"-------------------","pos":"X","lemma":"-----------------"}
             headerToken = {"text":s,"pos":"X","lemma":s}
